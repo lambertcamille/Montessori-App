@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Ateliers Montessori</title>
+
+<style>
+body { font-family: Arial; margin:0; }
+
+/* ONGLETS */
+.tabs { display:flex; background:#2c3e50; }
+.tab { padding:15px; color:white; cursor:pointer; }
+.tab.active { background:#1abc9c; }
+
+/* SECTIONS */
+.section { display:none; padding:20px; }
+.section.active { display:block; }
+
+/* TABLEAU */
+.big-word {
+  display:inline-block;
+  text-align:center;
+  margin:15px;
+}
+.big-word svg { width:60px; height:60px; }
+.big-word span {
+  font-size:28px;
+  font-family:"Marelle", Arial;
+}
+
+/* ATELIER */
+.word {
+  display:inline-block;
+  text-align:center;
+  margin:8px;
+}
+.symbol svg { width:30px; height:30px; }
+
+.word span {
+  font-family:"Marelle", Arial;
+  font-size:20px;
+}
+
+/* IMPRESSION */
+@media print {
+  body * { visibility:hidden; }
+  #printZone, #printZone * { visibility:visible; }
+
+  #printZone {
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+  }
+
+  .page {
+    page-break-after:always;
+    padding:40px;
+  }
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- ONGLETS -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab(event,'tableau')">🟦 Tableau</div>
+  <div class="tab" onclick="showTab(event,'atelier')">🟩 Ateliers</div>
+</div>
+
+<!-- MODE TABLEAU -->
+<div id="tableau" class="section active">
+
+<h2>Projection classe</h2>
+
+<textarea id="phraseTableau" placeholder="Tape une phrase"></textarea><br><br>
+
+<button onclick="analyzeTableau()">Afficher</button>
+
+<div id="resultTableau"></div>
+
+</div>
+
+<!-- MODE ATELIERS -->
+<div id="atelier" class="section">
+
+<h2>Création ateliers autocorrectifs</h2>
+
+<textarea id="phrases" placeholder="1 phrase par ligne (max 12)"></textarea>
+
+<h3>Type de correction</h3>
+<label><input type="radio" name="mode" value="nature" checked> Nature</label>
+<label><input type="radio" name="mode" value="fonction"> Fonction</label>
+<label><input type="radio" name="mode" value="both"> Nature + Fonction</label>
+
+<br><br>
+
+<button onclick="generateA4()">📄 Générer fiche A4</button>
+
+</div>
+
+<script>
+
+// ===== ONGLET =====
+function showTab(evt,id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+
+  document.getElementById(id).classList.add('active');
+  evt.target.classList.add('active');
+}
+
+// ===== DICTIONNAIRE =====
+const dict = {
+"le":"det","la":"det","un":"det","une":"det",
+"chat":"nom","chien":"nom","souris":"nom",
+"mange":"verbe","court":"verbe",
+"petit":"adj","grand":"adj",
+"dans":"prep","à":"prep",
+"hier":"temps","aujourd'hui":"temps",
+"vite":"maniere","lentement":"maniere"
+};
+
+// ===== SYMBOLES NATURE =====
+function symbol(type){
+
+if(type==="nom") return `<svg viewBox="0 0 100 100"><polygon points="50,10 90,90 10,90" fill="black"/></svg>`;
+if(type==="verbe") return `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="red"/></svg>`;
+if(type==="adj") return `<svg viewBox="0 0 100 100"><polygon points="50,20 80,80 20,80" fill="blue"/></svg>`;
+if(type==="det") return `<svg viewBox="0 0 100 100"><polygon points="50,35 70,75 30,75" fill="lightblue"/></svg>`;
+
+return "";
+}
+
+// ===== FONCTIONS =====
+function getFunction(word,index){
+
+if(index===0) return "Sujet";
+if(dict[word]==="verbe") return "Verbe";
+if(dict[word]==="prep") return "COI";
+if(dict[word]==="temps") return "CCT";
+if(dict[word]==="maniere") return "CCM";
+
+return "COD";
+}
+
+// ===== BARQUETTES =====
+function box(func){
+
+if(func==="Sujet") return `<div style="border:3px solid purple; padding:4px;">`;
+if(func==="COD") return `<div style="border:3px solid blue; padding:4px;">`;
+if(func==="COI") return `<div style="border:3px dashed blue; padding:4px;">`;
+if(func==="CCT") return `<div style="border:3px solid orange; padding:4px;">`;
+if(func==="CCM") return `<div style="border:3px dotted green; padding:4px;">`;
+
+return `<div>`;
+}
+
+// ===== TABLEAU =====
+function analyzeTableau(){
+
+let text=document.getElementById("phraseTableau").value;
+let words=text.split(" ");
+
+let zone=document.getElementById("resultTableau");
+zone.innerHTML="";
+
+words.forEach(word=>{
+
+let type=dict[word.toLowerCase()]||"nom";
+
+let div=document.createElement("div");
+div.className="big-word";
+
+div.innerHTML=`
+${symbol(type)}
+<span>${word}</span>
+`;
+
+zone.appendChild(div);
+
+});
+}
+
+// ===== GENERATION A4 =====
+function generateA4(){
+
+let phrases=document.getElementById("phrases").value.split("\n").slice(0,12);
+let mode=document.querySelector('input[name="mode"]:checked').value;
+
+let recto=`<div class="page"><h2>Exercices</h2>`;
+let verso=`<div class="page"><h2>Correction</h2>`;
+
+phrases.forEach(p=>{
+
+recto+=`<p>${p}</p>`;
+
+let words=p.split(" ");
+verso+=`<div style="margin:20px;">`;
+
+words.forEach((word,i)=>{
+
+let type=dict[word.toLowerCase()]||"nom";
+let func=getFunction(word.toLowerCase(),i);
+
+let content="";
+
+if(mode==="nature") content=`${symbol(type)}<div>${word}</div>`;
+if(mode==="fonction") content=`<div style="font-size:12px;">${func}</div><div>${word}</div>`;
+if(mode==="both") content=`${symbol(type)}<div style="font-size:12px;">${func}</div><div>${word}</div>`;
+
+verso+=`
+<div class="word">
+${box(func)}
+${content}
+</div>
+</div>
+`;
+
+});
+
+verso+=`</div>`;
+});
+
+recto+=`</div>`;
+verso+=`</div>`;
+
+let zone=document.createElement("div");
+zone.id="printZone";
+zone.innerHTML=recto+verso;
+
+document.body.appendChild(zone);
+
+window.print();
+
+}
+
+</script>
+
+</body>
+</html>
